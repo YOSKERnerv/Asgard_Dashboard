@@ -64,9 +64,20 @@ st.markdown("### Advanced Interactive Analytics & Ranking System")
 # =========================
 # LOAD DATA
 # =========================
-file_path = "ASG Contribution and cp check.xlsx"
+@st.cache_data(ttl=60)
+def load_data():
 
-consolidated = pd.read_excel(file_path, sheet_name="Consolidated_Data")
+    sheet_id = "1pJUuzkhPdbC7KVqrS1mxKxtY2CsACyyTwAnxF6VEYYo"
+
+    sheet_name = "Consolidated_Data"
+
+    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+
+    df = pd.read_csv(url)
+
+    return df
+
+consolidated = load_data()
 
 # =========================
 # CLEAN DATA
