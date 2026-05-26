@@ -9,9 +9,8 @@ import os
 import tempfile
 from datetime import datetime
 import pandas as pd
-import json
 from data_processor import DataProcessor
-import traceback
+import io
 
 app = Flask(__name__)
 CORS(app)
@@ -254,15 +253,14 @@ def export_common_sheet():
     try:
         if current_data['common_sheet'] is None or len(current_data['common_sheet']) == 0:
             return jsonify({'error': 'No data to export'}), 404
-        
-        # Create Excel file
-        output = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
-        with pd.ExcelWriter(output.name, engine='openpyxl') as writer:
+        # Create Excel in-memory
+        buf = io.BytesIO()
+        with pd.ExcelWriter(buf, engine='openpyxl') as writer:
             current_data['common_sheet'].to_excel(writer, sheet_name='Common Sheet', index=False)
-        
-        output.seek(0)
+
+        buf.seek(0)
         return send_file(
-            output.name,
+            buf,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             as_attachment=True,
             download_name='common_sheet.xlsx'
@@ -281,15 +279,14 @@ def export_bottom_20():
         
         bottom_20 = current_data['analytics']['bottom_20']
         df = pd.DataFrame(bottom_20)
-        
-        # Create Excel file
-        output = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
-        with pd.ExcelWriter(output.name, engine='openpyxl') as writer:
+        # Create Excel in-memory
+        buf = io.BytesIO()
+        with pd.ExcelWriter(buf, engine='openpyxl') as writer:
             df.to_excel(writer, sheet_name='Bottom 20', index=False)
-        
-        output.seek(0)
+
+        buf.seek(0)
         return send_file(
-            output.name,
+            buf,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             as_attachment=True,
             download_name='bottom_20.xlsx'

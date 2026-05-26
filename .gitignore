@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.xlsx
+.env
+
+# Development/debug scripts
+debug_duel.py
+debug_full.py
+debug_processor.py
+demo.py
+inspect_excel.py
+verify.py
+
+# IDE/editor files
+.vscode/
+*.swp
