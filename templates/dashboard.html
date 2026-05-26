@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASGARD Alliance Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at top, rgba(255, 107, 107, 0.22), transparent 28%),
+                        radial-gradient(circle at right, rgba(37, 99, 235, 0.16), transparent 28%),
+                        linear-gradient(180deg, #071427 0%, #0f2343 45%, #09172c 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: rgba(6, 16, 42, 0.94);
+            padding: 1.3rem 2rem;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .navbar h1 {
+            color: #ffffff;
+            font-size: 1.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            letter-spacing: 0.02em;
+        }
+
+        .container {
+            max-width: 1360px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 3rem;
+        }
+
+        .upload-section,
+        .stat-card,
+        .data-table,
+        .chart-container {
+            border-radius: 24px;
+            background: rgba(9, 16, 39, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 28px 80px rgba(0, 0, 0, 0.2);
+        }
+
+        .upload-section {
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.16), rgba(37, 99, 235, 0.1));
+            opacity: 0.16;
+            pointer-events: none;
+        }
+
+        .upload-section h2 {
+            margin-bottom: 0.4rem;
+            color: #f8fafc;
+            font-size: 1.8rem;
+        }
+
+        .upload-section p {
+            margin-bottom: 1.5rem;
+            color: rgba(226, 232, 240, 0.78);
+            line-height: 1.7;
+        }
+
+        .file-input-wrapper {
+            display: grid;
+            grid-template-columns: 1.7fr 0.9fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .dropzone {
+            position: relative;
+            padding: 2rem;
+            border: 2px dashed rgba(226, 232, 240, 0.24);
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            cursor: pointer;
+            transition: all 0.25s ease;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: rgba(226, 232, 240, 0.82);
+        }
+
+        .dropzone.dragover {
+            border-color: rgba(255, 107, 107, 0.75);
+            background: rgba(255, 107, 107, 0.08);
+            color: #ffffff;
+            transform: translateY(-2px);
+        }
+
+        .dropzone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .dropzone span {
+            display: block;
+            pointer-events: none;
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+
+        .upload-guidance {
+            color: rgba(226, 232, 240, 0.68);
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            border-radius: 16px;
+            letter-spacing: 0.01em;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff6b6b, #ff8c42);
+            color: #ffffff;
+            box-shadow: 0 18px 40px rgba(255, 107, 107, 0.28);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 24px 55px rgba(255, 107, 107, 0.32);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.14);
+        }
+
+        .btn-small {
+            padding: 0.75rem 1.15rem;
+            font-size: 0.95rem;
+        }
+
+        .status-message {
+            padding: 1rem 1.25rem;
+            border-radius: 16px;
+            margin-top: 1rem;
+            font-weight: 600;
+        }
+
+        .status-success { background: rgba(34, 197, 94, 0.14); color: #d1fae5; border: 1px solid rgba(34, 197, 94, 0.32); }
+        .status-error { background: rgba(248, 113, 113, 0.14); color: #fee2e2; border: 1px solid rgba(248, 113, 113, 0.32); }
+        .status-loading { background: rgba(148, 163, 184, 0.14); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.32); }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.3rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            padding: 1.75rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 107, 107, 0.12);
+            border-radius: 50%;
+        }
+
+        .stat-card h3 {
+            color: rgba(226, 232, 240, 0.72);
+            font-size: 0.88rem;
+            margin-bottom: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+        }
+
+        .stat-card .value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #f8fafc;
+        }
+
+        .tabs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .tab-btn {
+            padding: 1rem 1rem;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            color: rgba(241, 245, 249, 0.86);
+            text-align: center;
+            transition: all 0.25s ease;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.22), rgba(37, 99, 235, 0.18));
+            color: #ffffff;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .tab-btn:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease both;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .data-table {
+            padding: 1rem;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 0.65rem;
+        }
+
+        thead {
+            background: transparent;
+        }
+
+        th {
+            padding: 1rem 1rem 0.75rem;
+            text-align: left;
+            font-weight: 700;
+            color: rgba(241, 245, 249, 0.8);
+        }
+
+        td {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.04);
+            color: rgba(241, 245, 249, 0.92);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        tbody tr {
+            transition: transform 0.25s ease, background 0.25s ease;
+        }
+
+        tbody tr:hover {
+            transform: translateX(8px);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .chart-container {
+            padding: 1.5rem;
+            min-height: 360px;
+        }
+
+        .search-box {
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .search-box input,
+        .search-box select {
+            flex: 1;
+            padding: 0.95rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #f8fafc;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+        }
+
+        .search-box input::placeholder {
+            color: rgba(241, 245, 249, 0.6);
+        }
+
+        .search-box select option {
+            background: #0c1736;
+            color: #f8fafc;
+        }
+
+        .search-box input:focus,
+        .search-box select:focus {
+            outline: none;
+            border-color: rgba(255, 107, 107, 0.65);
+            box-shadow: 0 0 24px rgba(255, 107, 107, 0.16);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(241, 245, 249, 0.78);
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.15);
+            border-top: 4px solid #ff6b6b;
+            border-radius: 50%;
+            width: 42px;
+            height: 42px;
+            animation: spin 1s linear infinite;
+            margin: 1rem auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            padding: 1rem;
+        }
+
+        .pagination button {
+            padding: 0.75rem 0.95rem;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(241, 245, 249, 0.88);
+            border-radius: 999px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .pagination button.active {
+            background: #ff6b6b;
+            color: white;
+            border-color: #ff6b6b;
+        }
+
+        .pagination button:hover {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 992px) {
+            .file-input-wrapper {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-container {
+                min-height: 320px;
+            }
+        }
+
+        @media (max-width: 680px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .navbar {
+                padding: 1rem;
+            }
+
+            .tabs {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-card {
+                padding: 1.4rem;
+            }
+
+            th,
+            td {
+                padding: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>⚔️ ASGARD ALLIANCE DASHBOARD</h1>
+    </div>
+
+    <div class="container">
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <h2>📤 Upload Excel File</h2>
+            <p>Drag and drop your Excel file here, or click the area to select a file. The dashboard will process all sheets and build your unified alliance analytics automatically.</p>
+            <div class="file-input-wrapper">
+                <div class="dropzone" id="dropzone">
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
+                    <span>Drag & drop your .xlsx, .xls, or .csv file here</span>
+                </div>
+                <button class="btn btn-primary" onclick="uploadFile()">Upload & Process</button>
+            </div>
+            <div class="upload-guidance">Supports files up to 50MB. Data is processed locally and displayed instantly.</div>
+            <div id="uploadStatus"></div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="stats-grid" id="statsGrid" style="display: none;">
+            <div class="stat-card">
+                <h3>👥 Total Members</h3>
+                <div class="value" id="totalMembers">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>⚔️ Total Duel</h3>
+                <div class="value" id="totalDuel">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>🧪 Total Tech</h3>
+                <div class="value" id="totalTech">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>🚀 Total CP Growth</h3>
+                <div class="value" id="totalCP">0</div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs" id="tabsContainer" style="display: none;">
+            <button class="tab-btn active" onclick="switchTab('overview', event)">Overview</button>
+            <button class="tab-btn" onclick="switchTab('common-sheet', event)">Common Sheet</button>
+            <button class="tab-btn" onclick="switchTab('bottom-20', event)">Bottom 20</button>
+            <button class="tab-btn" onclick="switchTab('top-performers', event)">Top Performers</button>
+            <button class="tab-btn" onclick="switchTab('lowest-performers', event)">Lowest Performers</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview" class="tab-content active">
+            <div class="chart-container">
+                <canvas id="duelChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="techChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="cpChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Common Sheet Tab -->
+        <div id="common-sheet" class="tab-content">
+            <div class="search-box">
+                <input type="text" id="memberSearch" placeholder="Search member..." onkeyup="searchCommonSheet()">
+            </div>
+            <div class="export-buttons">
+                <button class="btn btn-secondary btn-small" onclick="exportCommonSheet()">📥 Export Common Sheet</button>
+            </div>
+            <div class="data-table">
+                <div class="table-wrapper">
+                    <table id="commonSheetTable">
+                        <thead>
+                            <tr>
+                                <th>Member</th>
+                                <th>Total Duel</th>
+                                <th>Total Tech</th>
+                                <th>CP Growth</th>
+                            </tr>
+                        </thead>
+                        <tbody id="commonSheetBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="commonSheetPagination"></div>
+            </div>
+        </div>
+
+        <!-- Bottom 20 Tab -->
+        <div id="bottom-20" class="tab-content">
+            <div class="export-buttons">
+                <button class="btn btn-secondary btn-small" onclick="exportBottom20()">📥 Export Bottom 20</button>
+            </div>
+            <div class="data-table">
+                <div class="table-wrapper">
+                    <table id="bottom20Table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Member</th>
+                                <th>Total Duel</th>
+                                <th>Total Tech</th>
+                                <th>CP Growth</th>
+                                <th>Combined Score</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bottom20Body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Performers Tab -->
+        <div id="top-performers" class="tab-content">
+            <div class="search-box">
+                <select id="topMetricFilter" onchange="updateTopPerformers()" style="padding: 0.75rem; border: 2px solid #ddd; border-radius: 5px;">
+                    <option value="duel">Top Duel Performers</option>
+                    <option value="tech">Top Tech Performers</option>
+                    <option value="cp">Top CP Growth</option>
+                </select>
+            </div>
+            <div class="data-table">
+                <div class="table-wrapper">
+                    <table id="topTable">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Member</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lowest Performers Tab -->
+        <div id="lowest-performers" class="tab-content">
+            <div class="search-box">
+                <select id="lowestMetricFilter" onchange="updateLowestPerformers()" style="padding: 0.75rem; border: 2px solid #ddd; border-radius: 5px;">
+                    <option value="duel">Lowest Duel Contributors</option>
+                    <option value="tech">Lowest Tech Contributors</option>
+                    <option value="cp">Least Active CP</option>
+                </select>
+            </div>
+            <div class="data-table">
+                <div class="table-wrapper">
+                    <table id="lowestTable">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Member</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lowestTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentData = {
+            commonSheet: [],
+            bottom20: [],
+            analytics: {}
+        };
+        let currentPage = 1;
+        const itemsPerPage = 50;
+        let duelChart, techChart, cpChart;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initDropzone();
+        });
+
+        function initDropzone() {
+            const dropzone = document.getElementById('dropzone');
+            if (!dropzone) return;
+
+            const highlight = () => dropzone.classList.add('dragover');
+            const unhighlight = () => dropzone.classList.remove('dragover');
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    highlight();
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    unhighlight();
+                });
+            });
+
+            dropzone.addEventListener('drop', (event) => {
+                const files = event.dataTransfer.files;
+                if (files.length) {
+                    document.getElementById('fileInput').files = files;
+                    uploadFile();
+                }
+            });
+        }
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files.length) {
+                alert('Please select a file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            const statusDiv = document.getElementById('uploadStatus');
+            statusDiv.innerHTML = '<div class="status-message status-loading"><div class="spinner"></div>Processing file...</div>';
+
+            try {
+                const response = await axios.post('/api/upload', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+
+                statusDiv.innerHTML = `<div class="status-message status-success">✓ File processed successfully! ${response.data.data_summary.total_members} members loaded.</div>`;
+                
+                // Hide file input, show data
+                document.querySelector('.file-input-wrapper').style.display = 'none';
+                document.getElementById('statsGrid').style.display = 'grid';
+                document.getElementById('tabsContainer').style.display = 'flex';
+
+                // Load data
+                await loadAllData();
+
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status-message status-error">✗ Error: ${error.response?.data?.error || error.message}</div>`;
+            }
+        }
+
+        async function loadAllData() {
+            try {
+                // Load analytics
+                const analyticsRes = await axios.get('/api/data/analytics');
+                const analytics = analyticsRes.data;
+
+                // Update stats with animation
+                animateValue('totalMembers', 0, analytics.summary.total_members);
+                animateValue('totalDuel', 0, Math.round(analytics.summary.total_duel));
+                animateValue('totalTech', 0, Math.round(analytics.summary.total_tech));
+                animateValue('totalCP', 0, Math.round(analytics.summary.total_cp_growth));
+
+                // Load common sheet
+                const commonRes = await axios.get('/api/data/common-sheet?page=1&per_page=50');
+                currentData.commonSheet = commonRes.data.data;
+                currentData.commonSheetTotal = commonRes.data.total;
+
+                // Load bottom 20
+                const bottom20Res = await axios.get('/api/data/bottom-20');
+                currentData.bottom20 = bottom20Res.data.data;
+
+                // Load top performers
+                const topRes = await axios.get('/api/data/top-performers?metric=duel');
+                currentData.topPerformers = topRes.data.data;
+                currentData.topMetric = 'duel';
+
+                // Load lowest performers
+                const lowestRes = await axios.get('/api/data/lowest-performers?metric=duel');
+                currentData.lowestPerformers = lowestRes.data.data;
+                currentData.lowestMetric = 'duel';
+
+                // Render data
+                renderCommonSheet();
+                renderBottom20();
+                renderTopPerformers();
+                renderLowestPerformers();
+                renderCharts();
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        function renderCommonSheet() {
+            const tbody = document.getElementById('commonSheetBody');
+            tbody.innerHTML = currentData.commonSheet.map(row => `
+                <tr>
+                    <td>${row.Member}</td>
+                    <td>${(row.TotalDuel || 0).toFixed(2)}</td>
+                    <td>${(row.TotalTech || 0).toFixed(0)}</td>
+                    <td>${(row.CP_23d_Growth || 0).toFixed(2)}</td>
+                </tr>
+            `).join('');
+
+            renderPagination(currentData.commonSheetTotal, 'commonSheetPagination');
+        }
+
+        function renderBottom20() {
+            const tbody = document.getElementById('bottom20Body');
+            tbody.innerHTML = currentData.bottom20.map((row, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${row.Member}</td>
+                    <td>${(row.TotalDuel || 0).toFixed(2)}</td>
+                    <td>${(row.TotalTech || 0).toFixed(0)}</td>
+                    <td>${(row.CP_23d_Growth || 0).toFixed(2)}</td>
+                    <td>${(row.CombinedScore || 0).toFixed(0)}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function updateTopPerformers() {
+            const metric = document.getElementById('topMetricFilter').value;
+            try {
+                const res = await axios.get(`/api/data/top-performers?metric=${metric}`);
+                currentData.topPerformers = res.data.data;
+                currentData.topMetric = metric;
+                renderTopPerformers();
+            } catch (error) {
+                console.error('Error loading top performers:', error);
+            }
+        }
+
+        async function updateLowestPerformers() {
+            const metric = document.getElementById('lowestMetricFilter').value;
+            try {
+                const res = await axios.get(`/api/data/lowest-performers?metric=${metric}`);
+                currentData.lowestPerformers = res.data.data;
+                currentData.lowestMetric = metric;
+                renderLowestPerformers();
+            } catch (error) {
+                console.error('Error loading lowest performers:', error);
+            }
+        }
+
+        function getMetricKey(metric) {
+            switch (metric) {
+                case 'tech': return 'TotalTech';
+                case 'cp': return 'CP_23d_Growth';
+                default: return 'TotalDuel';
+            }
+        }
+
+        function getMetricLabel(metric) {
+            switch (metric) {
+                case 'tech': return 'Total Tech';
+                case 'cp': return 'CP Growth';
+                default: return 'Total Duel';
+            }
+        }
+
+        function renderTopPerformers() {
+            const metric = currentData.topMetric || document.getElementById('topMetricFilter').value || 'duel';
+            const key = getMetricKey(metric);
+            const label = getMetricLabel(metric);
+            const tbody = document.getElementById('topTableBody');
+            tbody.innerHTML = currentData.topPerformers.map((row, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${row.Member}</td>
+                    <td>${(row[key] || 0).toFixed(key === 'TotalTech' ? 0 : 2)}</td>
+                </tr>
+            `).join('');
+
+            document.querySelector('#topTable thead th:last-child').textContent = label;
+        }
+
+        function renderLowestPerformers() {
+            const metric = currentData.lowestMetric || document.getElementById('lowestMetricFilter').value || 'duel';
+            const key = getMetricKey(metric);
+            const label = getMetricLabel(metric);
+            const tbody = document.getElementById('lowestTableBody');
+            tbody.innerHTML = currentData.lowestPerformers.map((row, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${row.Member}</td>
+                    <td>${(row[key] || 0).toFixed(key === 'TotalTech' ? 0 : 2)}</td>
+                </tr>
+            `).join('');
+
+            document.querySelector('#lowestTable thead th:last-child').textContent = label;
+        }
+
+        function renderCharts() {
+            const topMembers = currentData.bottom20.slice(0, 10);
+
+            // Duel Chart
+            const duelCtx = document.getElementById('duelChart').getContext('2d');
+            if (duelChart) duelChart.destroy();
+            duelChart = new Chart(duelCtx, {
+                type: 'bar',
+                data: {
+                    labels: topMembers.map(r => r.Member),
+                    datasets: [{
+                        label: 'Total Duel',
+                        data: topMembers.map(r => r.TotalDuel),
+                        backgroundColor: 'rgba(255, 107, 107, 0.88)',
+                        borderRadius: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Bottom 10 - Duel Scores', color: '#f8fafc', font: { size: 18 } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#e2e8f0' } },
+                        y: { ticks: { color: '#e2e8f0' } }
+                    }
+                }
+            });
+
+            // Tech Chart
+            const techCtx = document.getElementById('techChart').getContext('2d');
+            if (techChart) techChart.destroy();
+            techChart = new Chart(techCtx, {
+                type: 'bar',
+                data: {
+                    labels: topMembers.map(r => r.Member),
+                    datasets: [{
+                        label: 'Total Tech',
+                        data: topMembers.map(r => r.TotalTech),
+                        backgroundColor: 'rgba(34, 197, 94, 0.88)',
+                        borderRadius: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Bottom 10 - Tech Scores', color: '#f8fafc', font: { size: 18 } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#e2e8f0' } },
+                        y: { ticks: { color: '#e2e8f0' } }
+                    }
+                }
+            });
+
+            // CP Chart
+            const cpCtx = document.getElementById('cpChart').getContext('2d');
+            if (cpChart) cpChart.destroy();
+            cpChart = new Chart(cpCtx, {
+                type: 'bar',
+                data: {
+                    labels: topMembers.map(r => r.Member),
+                    datasets: [{
+                        label: 'CP Growth',
+                        data: topMembers.map(r => r.CP_23d_Growth),
+                        backgroundColor: 'rgba(37, 99, 235, 0.88)',
+                        borderRadius: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Bottom 10 - CP Growth', color: '#f8fafc', font: { size: 18 } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#e2e8f0' } },
+                        y: { ticks: { color: '#e2e8f0' } }
+                    }
+                }
+            });
+        }
+
+        function renderPagination(total, elementId) {
+            const totalPages = Math.ceil(total / itemsPerPage);
+            const pagination = document.getElementById(elementId);
+            pagination.innerHTML = '';
+
+            for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+                const btn = document.createElement('button');
+                btn.textContent = i;
+                btn.className = i === currentPage ? 'active' : '';
+                btn.onclick = () => changePage(i);
+                pagination.appendChild(btn);
+            }
+        }
+
+        async function changePage(page) {
+            currentPage = page;
+            try {
+                const res = await axios.get(`/api/data/common-sheet?page=${page}&per_page=${itemsPerPage}`);
+                currentData.commonSheet = res.data.data;
+                renderCommonSheet();
+            } catch (error) {
+                console.error('Error loading page:', error);
+            }
+        }
+
+        async function searchCommonSheet() {
+            const query = document.getElementById('memberSearch').value;
+            try {
+                const res = await axios.get(`/api/data/common-sheet?member=${query}&page=1&per_page=${itemsPerPage}`);
+                currentData.commonSheet = res.data.data;
+                currentPage = 1;
+                renderCommonSheet();
+            } catch (error) {
+                console.error('Error searching:', error);
+            }
+        }
+
+        function switchTab(tabName, event) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            if (event?.currentTarget) {
+                event.currentTarget.classList.add('active');
+            } else if (event?.target) {
+                event.target.classList.add('active');
+            }
+        }
+
+        function animateValue(elementId, start, end, duration = 900) {
+            const element = document.getElementById(elementId);
+            const range = end - start;
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                element.textContent = Math.floor(progress * range + start).toLocaleString();
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    element.textContent = end.toLocaleString();
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        async function exportCommonSheet() {
+            window.location.href = '/api/data/export-common-sheet';
+        }
+
+        async function exportBottom20() {
+            window.location.href = '/api/data/export-bottom-20';
+        }
+    </script>
+</body>
+</html>
