@@ -36,22 +36,6 @@ st.markdown("### Advanced Interactive Analytics & Ranking System")
 # =========================
 # DATA LOADER
 # =========================
-<<<<<<< HEAD
-@st.cache_data(ttl=60)
-def load_data():
-
-    sheet_id = "1pJUuzkhPdbC7KVqrS1mxKxtY2CsACyyTwAnxF6VEYYo"
-
-    sheet_name = "Consolidated_Data"
-
-    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
-
-    df = pd.read_csv(url)
-
-    return df
-
-consolidated = load_data()
-=======
 # (Local upload only) combine all sheets into a commonSheet
 
 
@@ -254,8 +238,6 @@ def load_data(uploaded: Optional[io.BytesIO]) -> pd.DataFrame:
     except Exception as e:
         st.error(f"Failed to read uploaded file: {e}")
         return pd.DataFrame()
-
->>>>>>> a76be1c (added render verson dashboard)
 
 # =========================
 # SIDEBAR - Controls
